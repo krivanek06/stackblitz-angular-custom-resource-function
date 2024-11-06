@@ -1,10 +1,9 @@
+import { HttpClient } from '@angular/common/http';
 import { Component, effect, inject, ResourceStatus } from '@angular/core';
-import { Todo } from './model';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { rxResource } from '@angular/core/rxjs-interop';
+import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { delay } from 'rxjs';
+import { Todo } from './model';
 
 @Component({
   selector: 'app-resource-normal-example',
@@ -22,7 +21,7 @@ import { delay } from 'rxjs';
     @for(item of (todosResource.value() ?? []); track $index){
       <div>
       {{item.id}} --
-      {{item.title }}
+          {{item.title }} 
     </div>
     }
   }

@@ -11,20 +11,19 @@ import { Todo } from './model';
   imports: [ReactiveFormsModule],
   template: `
     <h1>Resource Normal Example</h1>
-    <button (click)="todosResource.reload()"> refresh </button>
+    <button (click)="todosResource.reload()">refresh</button>
     <input type="number" [formControl]="limitControl" />
 
-    @if(todosResource.isLoading()){
+    @if (todosResource.isLoading()) {
       loading
-    } @else if(todosResource.value()){
-
-    @for(item of (todosResource.value() ?? []); track $index){
-      <div>
-      {{item.id}} --
-          {{item.title }} 
-    </div>
+    } @else if (todosResource.value()) {
+      @for (item of todosResource.value() ?? []; track $index) {
+        <div>
+          {{ item.id }} --
+          {{ item.title }}
+        </div>
+      }
     }
-  }
   `,
 })
 export class ResourceNormalExample {
@@ -37,11 +36,7 @@ export class ResourceNormalExample {
     request: this.limitValue,
     loader: ({ request: limit }) => {
       console.log('limit', limit);
-      return this.http
-        .get<Todo[]>(
-          `https://jsonplaceholder.typicode.com/todos?_limit=${limit}`
-        )
-        .pipe(delay(1000));
+      return this.http.get<Todo[]>(`https://jsonplaceholder.typicode.com/todos?_limit=${limit}`).pipe(delay(1000));
     },
   });
 

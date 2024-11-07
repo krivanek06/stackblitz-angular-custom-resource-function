@@ -20,74 +20,6 @@ export interface Todo {
 // Helper type to extract the type of values emitted by an Observable
 type ObservableValue<T> = T extends Observable<infer U> ? U : never;
 
-// -------------------------------
-// BASIC EXAMPLE - NO RELOAD
-
-export type RxResourceCustomBasic<T> =
-  | {
-      state: 'loading';
-      isLoading: true;
-      data: null;
-    }
-  | {
-      state: 'loaded';
-      isLoading: false;
-      data: T;
-    }
-  | {
-      state: 'error';
-      isLoading: false;
-      data: null;
-      error: unknown;
-    };
-
-export const rxResourceCustomBasic = <T, TLoader extends Observable<unknown>[]>(data: {
-  request: [...TLoader];
-  loader: (values: {
-    [K in keyof TLoader]: ObservableValue<TLoader[K]>;
-  }) => Observable<T>;
-}): Observable<RxResourceCustomBasic<T>> => {
-  return combineLatest(data.request).pipe(
-    switchMap((values) =>
-      data
-        .loader(
-          values as {
-            [K in keyof TLoader]: ObservableValue<TLoader[K]>;
-          },
-        )
-        .pipe(
-          switchMap((result) =>
-            of({
-              state: 'loaded',
-              isLoading: false,
-              data: result,
-            } satisfies RxResourceCustomBasic<T>),
-          ),
-        ),
-    ),
-    // handle error state
-    catchError((error) =>
-      of({
-        state: 'error',
-        isLoading: false,
-        error,
-        data: null,
-      } satisfies RxResourceCustomBasic<T>),
-    ),
-    // setup loading state
-    startWith({
-      state: 'loading',
-      isLoading: true,
-      data: null,
-    } satisfies RxResourceCustomBasic<T>),
-
-    // share the observable
-    shareReplay(1),
-  );
-};
-
-// -------------------------------
-// EXAMPLE WITH RELOADING DATA
 type RxResourceCustomResult<T> =
   | {
       state: 'loading';
@@ -105,6 +37,78 @@ type RxResourceCustomResult<T> =
       data: null;
       error: unknown;
     };
+
+// -------------------------------
+// BASIC EXAMPLE - NO RELOAD
+
+// export const rxResourceCustomBasic = <T, TLoader extends Observable<unknown>[]>(data: {
+//   request: [...TLoader];
+//   loader: (values: {
+//     [K in keyof TLoader]: ObservableValue<TLoader[K]>;
+//   }) => Observable<T>;
+// }): Observable<RxResourceCustomResult<T>> => {
+
+//   return of({ } as RxResourceCustomResult<any>);
+// }
+
+// const test1$ = new Subject<number>();
+// const test2$ = new Subject<string>();
+// const test3$ = new Subject<{name: string}>();
+
+// const result = rxResourceCustomBasic({
+//   request: [test1$, test2$, test3$],
+//   loader: ([v1, v2, v3]) => { // correct types
+//     return of({} as Todo);
+//   },
+// })
+
+export const rxResourceCustomBasic = <T, TLoader extends Observable<unknown>[]>(data: {
+  request: [...TLoader];
+  loader: (values: {
+    [K in keyof TLoader]: ObservableValue<TLoader[K]>;
+  }) => Observable<T>;
+}): Observable<RxResourceCustomResult<T>> => {
+  return combineLatest(data.request).pipe(
+    switchMap((values) =>
+      data
+        .loader(
+          values as {
+            [K in keyof TLoader]: ObservableValue<TLoader[K]>;
+          },
+        )
+        .pipe(
+          switchMap((result) =>
+            of({
+              state: 'loaded',
+              isLoading: false,
+              data: result,
+            } satisfies RxResourceCustomResult<T>),
+          ),
+          // setup loading state
+          startWith({
+            state: 'loading',
+            isLoading: true,
+            data: null,
+          } satisfies RxResourceCustomResult<T>),
+          // handle error state
+          catchError((error) =>
+            of({
+              state: 'error',
+              isLoading: false,
+              error,
+              data: null,
+            } satisfies RxResourceCustomResult<T>),
+          ),
+        ),
+    ),
+    // share the observable
+    shareReplay(1),
+  );
+};
+
+// -------------------------------
+// EXAMPLE WITH RELOADING DATA
+
 export type RxResourceCustom<T> = {
   reload: () => void;
   result: () => T | null;

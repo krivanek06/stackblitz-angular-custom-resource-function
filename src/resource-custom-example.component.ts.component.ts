@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { delay, map, startWith } from 'rxjs';
-import { rxResourceCustom, Todo } from './model';
+import { rxResourceCustom, rxResourceCustomBasic, Todo } from './model';
 
 @Component({
   selector: 'app-resource-custom-example',
@@ -35,7 +35,7 @@ import { rxResourceCustom, Todo } from './model';
 })
 export class ResourceCustomExampleComponent {
   private http = inject(HttpClient);
-  limitControl = new FormControl<number>(10, { nonNullable: true });
+  limitControl = new FormControl<number>(5, { nonNullable: true });
 
   private limitValue$ = this.limitControl.valueChanges.pipe(startWith(this.limitControl.value));
 
@@ -44,7 +44,7 @@ export class ResourceCustomExampleComponent {
     loader: ([limit]) => {
       return this.http.get<Todo[]>(`https://jsonplaceholder.typicode.com/todos?_limit=${limit}`).pipe(
         map((res) => {
-          if (limit === 13) {
+          if (limit === 8) {
             throw new Error('Error happened on the server');
           }
           return res;
@@ -54,7 +54,28 @@ export class ResourceCustomExampleComponent {
     },
   });
 
+  todosResourceBasic = rxResourceCustomBasic({
+    request: [this.limitValue$],
+    loader: ([limit]) => {
+      return this.http.get<Todo[]>(`https://jsonplaceholder.typicode.com/todos?_limit=${limit}`).pipe(
+        delay(1000),
+      );
+    },
+  });
+
+  constructor() {
+    this.todosResourceBasic.subscribe(
+      res => res.
+  );
+  }
+
+
+
+
+
+
   onRemove(todo: Todo) {
     this.todosResource.update((d) => d?.filter((item) => item.id !== todo.id));
   }
+
 }

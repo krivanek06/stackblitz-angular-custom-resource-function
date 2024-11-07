@@ -31,7 +31,7 @@ import { Todo } from './model';
 })
 export class ResourceNormalExample {
   private http = inject(HttpClient);
-  limitControl = new FormControl<number>(10, { nonNullable: true });
+  limitControl = new FormControl<number>(5, { nonNullable: true });
 
   limitValue = toSignal(this.limitControl.valueChanges, {
     initialValue: this.limitControl.value,
@@ -42,7 +42,7 @@ export class ResourceNormalExample {
     loader: ({ request: limit }) => {
       return this.http.get<Todo[]>(`https://jsonplaceholder.typicode.com/todos?_limit=${limit}`).pipe(
         map((res) => {
-          if (limit === 13) {
+          if (limit === 8) {
             throw new Error('Error happened on the server');
           }
           return res;

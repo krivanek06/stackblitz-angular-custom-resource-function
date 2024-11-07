@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, effect, inject, ResourceStatus } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { delay } from 'rxjs';
+import { delay, map } from 'rxjs';
 import { Todo } from './model';
 
 @Component({
@@ -10,20 +10,26 @@ import { Todo } from './model';
   standalone: true,
   imports: [ReactiveFormsModule],
   template: `
-    <h1>Resource Normal Example</h1>
-    <button (click)="todosResource.reload()">refresh</button>
-    <input type="number" [formControl]="limitControl" />
+    <div class="grid gap-y-2">
+      <h1>Resource Normal Example</h1>
+      <button (click)="todosResource.reload()">refresh</button>
+      <input type="number" [formControl]="limitControl" />
 
-    @if (todosResource.isLoading()) {
-      loading
-    } @else if (todosResource.value()) {
-      @for (item of todosResource.value() ?? []; track $index) {
-        <div>
-          {{ item.id }} --
-          {{ item.title }}
+      @if (todosResource.isLoading()) {
+        <div class="p-4 text-center text-lg">Loading...</div>
+      } @else if (todosResource.value()) {
+        @for (item of todosResource.value() ?? []; track $index) {
+          <div>
+            {{ item.id }} --
+            {{ item.title }}
+          </div>
+        }
+      } @else if (todosResource.error()) {
+        <div class="p-4 text-center text-lg">
+          {{ todosResource.error() }}
         </div>
       }
-    }
+    </div>
   `,
 })
 export class ResourceNormalExample {
@@ -35,18 +41,19 @@ export class ResourceNormalExample {
   todosResource = rxResource({
     request: this.limitValue,
     loader: ({ request: limit }) => {
-      console.log('limit', limit);
-      return this.http.get<Todo[]>(`https://jsonplaceholder.typicode.com/todos?_limit=${limit}`).pipe(delay(1000));
+      return this.http.get<Todo[]>(`https://jsonplaceholder.typicode.com/todos?_limit=${limit}`).pipe(
+        map((res) => {
+          if (limit === 13) {
+            throw new Error('Error happened on the server');
+          }
+          return res;
+        }),
+        delay(1000),
+      );
     },
   });
 
-  todosResourceee = effect(() => {
-    console.log('limitValue', this.limitValue());
-    console.log(ResourceStatus[this.todosResource.status()]);
-    console.log(this.todosResource.value());
-  });
-
   constructor() {
-    // this.limitControl.valueChanges.subscribe(console.log);
+    this.todosResource.error();
   }
 }

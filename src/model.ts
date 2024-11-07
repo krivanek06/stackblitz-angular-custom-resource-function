@@ -148,45 +148,40 @@ export const rxResourceCustom = <T, TLoader extends Observable<unknown>[]>(data:
     data: null,
   });
 
-  const result$ = reloadTrigger$.pipe(
-    startWith(null),
-    switchMap(() =>
-      combineLatest(data.request).pipe(
-        switchMap((values) =>
-          data
-            .loader(
-              values as {
-                [K in keyof TLoader]: ObservableValue<TLoader[K]>;
-              },
-            )
-            .pipe(
-              switchMap((result) =>
-                of({
-                  state: 'loaded',
-                  isLoading: false,
-                  data: result,
-                } satisfies RxResourceCustomResult<T>),
-              ),
+  const result$ = combineLatest([reloadTrigger$.pipe(startWith(null)), ...data.request]).pipe(
+    switchMap(([_, ...values]) =>
+      data
+        .loader(
+          values as {
+            [K in keyof TLoader]: ObservableValue<TLoader[K]>;
+          },
+        )
+        .pipe(
+          switchMap((result) =>
+            of({
+              state: 'loaded',
+              isLoading: false,
+              data: result,
+            } satisfies RxResourceCustomResult<T>),
+          ),
 
-              // setup loading state
-              startWith({
-                state: 'loading',
-                isLoading: true,
-                data: null,
-              } satisfies RxResourceCustomResult<T>),
+          // setup loading state
+          startWith({
+            state: 'loading',
+            isLoading: true,
+            data: null,
+          } satisfies RxResourceCustomResult<T>),
 
-              // handle error state
-              catchError((error) =>
-                of({
-                  state: 'error',
-                  isLoading: false,
-                  error,
-                  data: null,
-                } satisfies RxResourceCustomResult<T>),
-              ),
-            ),
+          // handle error state
+          catchError((error) =>
+            of({
+              state: 'error',
+              isLoading: false,
+              error,
+              data: null,
+            } satisfies RxResourceCustomResult<T>),
+          ),
         ),
-      ),
     ),
   );
 

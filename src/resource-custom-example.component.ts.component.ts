@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { delay, map, startWith } from 'rxjs';
-import { rxResourceCustom, rxResourceCustomBasic, Todo } from './model';
+import { rxResourceCustom, Todo } from './model';
 
 @Component({
   selector: 'app-resource-custom-example',
@@ -11,7 +11,7 @@ import { rxResourceCustom, rxResourceCustomBasic, Todo } from './model';
   imports: [ReactiveFormsModule, AsyncPipe],
   template: `
     <div class="grid gap-y-2">
-      <h1>Resource Normal Example</h1>
+      <h1>Resource Custom Example</h1>
       <button (click)="todosResource.reload()">refresh</button>
       <input type="number" [formControl]="limitControl" />
 
@@ -54,28 +54,7 @@ export class ResourceCustomExampleComponent {
     },
   });
 
-  todosResourceBasic = rxResourceCustomBasic({
-    request: [this.limitValue$],
-    loader: ([limit]) => {
-      return this.http.get<Todo[]>(`https://jsonplaceholder.typicode.com/todos?_limit=${limit}`).pipe(
-        delay(1000),
-      );
-    },
-  });
-
-  constructor() {
-    this.todosResourceBasic.subscribe(
-      res => res.
-  );
-  }
-
-
-
-
-
-
   onRemove(todo: Todo) {
     this.todosResource.update((d) => d?.filter((item) => item.id !== todo.id));
   }
-
 }

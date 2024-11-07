@@ -110,10 +110,25 @@ export const rxResourceCustomBasic = <T, TLoader extends Observable<unknown>[]>(
 // EXAMPLE WITH RELOADING DATA
 
 export type RxResourceCustom<T> = {
+  /**
+   * Trigger a reload of the resource
+   */
   reload: () => void;
+  /**
+   * @returns the current result of the resource
+   */
   result: () => T | null;
+  /**
+   * @param updateFn - function to update the current data
+   */
   update: (updateFn: (current: T) => T) => void;
+  /**
+   * @param data - set the data of the resource
+   */
   set: (data: T) => void;
+  /**
+   * Observable of the resource state
+   */
   result$: Observable<RxResourceCustomResult<T>>;
 };
 
@@ -147,27 +162,27 @@ export const rxResourceCustom = <T, TLoader extends Observable<unknown>[]>(data:
             .pipe(
               switchMap((result) =>
                 of({
-                  state: 'loaded' as const,
-                  isLoading: false as const,
+                  state: 'loaded',
+                  isLoading: false,
                   data: result,
-                }),
+                } satisfies RxResourceCustomResult<T>),
               ),
 
               // setup loading state
               startWith({
-                state: 'loading' as const,
-                isLoading: true as const,
+                state: 'loading',
+                isLoading: true,
                 data: null,
-              }),
+              } satisfies RxResourceCustomResult<T>),
 
               // handle error state
               catchError((error) =>
                 of({
-                  state: 'error' as const,
-                  isLoading: false as const,
+                  state: 'error',
+                  isLoading: false,
                   error,
                   data: null,
-                }),
+                } satisfies RxResourceCustomResult<T>),
               ),
             ),
         ),

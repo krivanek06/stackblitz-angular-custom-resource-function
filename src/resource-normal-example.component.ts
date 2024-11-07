@@ -16,16 +16,13 @@ import { Todo } from './model';
       <input type="number" [formControl]="limitControl" />
 
       @if (todosResource.isLoading()) {
-        <div class="p-4 text-center text-lg">Loading...</div>
+        <div class="g-loading">Loading...</div>
       } @else if (todosResource.value()) {
         @for (item of todosResource.value() ?? []; track $index) {
-          <div>
-            {{ item.id }} --
-            {{ item.title }}
-          </div>
+          <div class="g-item" (click)="onRemove(item)">{{ item.id }} -{{ item.title }}</div>
         }
       } @else if (todosResource.error()) {
-        <div class="p-4 text-center text-lg">
+        <div class="g-error">
           {{ todosResource.error() }}
         </div>
       }
@@ -34,9 +31,11 @@ import { Todo } from './model';
 })
 export class ResourceNormalExample {
   private http = inject(HttpClient);
-  limitControl = new FormControl<number>(10);
+  limitControl = new FormControl<number>(10, { nonNullable: true });
 
-  limitValue = toSignal(this.limitControl.valueChanges);
+  limitValue = toSignal(this.limitControl.valueChanges, {
+    initialValue: this.limitControl.value,
+  });
 
   todosResource = rxResource({
     request: this.limitValue,
@@ -53,7 +52,7 @@ export class ResourceNormalExample {
     },
   });
 
-  constructor() {
-    this.todosResource.error();
+  onRemove(todo: Todo) {
+    this.todosResource.update((d) => d?.filter((item) => item.id !== todo.id));
   }
 }

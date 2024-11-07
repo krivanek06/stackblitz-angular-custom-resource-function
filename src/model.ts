@@ -1,4 +1,5 @@
-import { catchError, combineLatest, Observable, of, startWith, Subject, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { BehaviorSubject, catchError, combineLatest, Observable, of, startWith, Subject, switchMap } from 'rxjs';
 
 export interface Todo {
   id: number;
@@ -6,7 +7,75 @@ export interface Todo {
   completed: boolean;
 }
 
-export type RxResourceCustom<T> =
+// Helper type to extract the type of values emitted by an Observable
+type ObservableValue<T> = T extends Observable<infer U> ? U : never;
+
+// -------------------------------
+// BASIC EXAMPLE - NO RELOAD
+
+// export type RxResourceCustom<T> = {
+//   state: 'loading';
+//   isLoading: true;
+//   data: null;
+// }
+// | {
+//   state: 'loaded';
+//   isLoading: false;
+//   data: T;
+// }
+// | {
+//   state: 'error';
+//   isLoading: false;
+//   data: null;
+//   error: unknown;
+// }
+
+// export const rxResourceCustom = <T, TLoader extends Observable<unknown>[]>(data: {
+//   request: [...TLoader];
+//   loader: (values: {
+//     [K in keyof TLoader]: ObservableValue<TLoader[K]>;
+//   }) => Observable<T>;
+// }): Observable<RxResourceCustom<T>> => {
+//   return combineLatest(data.request).pipe(
+//     switchMap((values) =>
+//       //map((values) => data.loader(...values)
+//       data
+//         .loader(
+//           values as {
+//             [K in keyof TLoader]: ObservableValue<TLoader[K]>;
+//           },
+//         )
+//         .pipe(
+//           switchMap((result) =>
+//             of({
+//               state: 'loaded',
+//               isLoading: false,
+//               data: result,
+//             } satisfies RxResourceCustom<T>),
+//           ),
+//         ),
+//     ),
+//     // handle error state
+//     catchError((error) =>
+//       of({
+//         state: 'error',
+//         isLoading: false,
+//         error,
+//         data: null,
+//       } satisfies RxResourceCustom<T>),
+//     ),
+//     // setup loading state
+//     startWith({
+//       state: 'loading',
+//       isLoading: true,
+//       data: null,
+//     } satisfies RxResourceCustom<T>),
+//   );
+// };
+
+// -------------------------------
+// EXAMPLE WITH RELOADING DATA
+type RxResourceCustomResult<T> =
   | {
       state: 'loading';
       isLoading: true;
@@ -23,62 +92,95 @@ export type RxResourceCustom<T> =
       data: null;
       error: unknown;
     };
-
-// Helper type to extract the type of values emitted by an Observable
-type ObservableValue<T> = T extends Observable<infer U> ? U : never;
+export type RxResourceCustom<T> = {
+  reload: () => void;
+  result: () => T | null;
+  update: (updateFn: (current: T) => T) => void;
+  set: (data: T) => void;
+  result$: Observable<RxResourceCustomResult<T>>;
+};
 
 export const rxResourceCustom = <T, TLoader extends Observable<unknown>[]>(data: {
   request: [...TLoader];
   loader: (values: {
     [K in keyof TLoader]: ObservableValue<TLoader[K]>;
   }) => Observable<T>;
-}): Observable<RxResourceCustom<T>> => {
-  return combineLatest(data.request).pipe(
-    switchMap((values) =>
-      //map((values) => data.loader(...values)
-      data
-        .loader(
-          values as {
-            [K in keyof TLoader]: ObservableValue<TLoader[K]>;
-          },
-        )
-        .pipe(
-          switchMap((result) =>
-            of({
-              state: 'loaded',
-              isLoading: false,
-              data: result,
-            } satisfies RxResourceCustom<T>),
-          ),
+}): RxResourceCustom<T> => {
+  // Subject to trigger reloads
+  const reloadTrigger$ = new Subject<void>();
+
+  // hold the latest result of type `T | null`
+  const resultState$ = new BehaviorSubject<RxResourceCustomResult<T>>({
+    state: 'loading',
+    isLoading: true,
+    data: null,
+  });
+
+  const result$ = reloadTrigger$.pipe(
+    startWith(null),
+    switchMap(() =>
+      combineLatest(data.request).pipe(
+        switchMap((values) =>
+          data
+            .loader(
+              values as {
+                [K in keyof TLoader]: ObservableValue<TLoader[K]>;
+              },
+            )
+            .pipe(
+              switchMap((result) =>
+                of({
+                  state: 'loaded' as const,
+                  isLoading: false as const,
+                  data: result,
+                }),
+              ),
+
+              // setup loading state
+              startWith({
+                state: 'loading' as const,
+                isLoading: true as const,
+                data: null,
+              }),
+
+              // handle error state
+              catchError((error) =>
+                of({
+                  state: 'error' as const,
+                  isLoading: false as const,
+                  error,
+                  data: null,
+                }),
+              ),
+            ),
         ),
+      ),
     ),
-    // handle error state
-    catchError((error) =>
-      of({
-        state: 'error',
-        isLoading: false,
-        error,
-        data: null,
-      } satisfies RxResourceCustom<T>),
-    ),
-    // setup loading state
-    startWith({
-      state: 'loading',
-      isLoading: true,
-      data: null,
-    } satisfies RxResourceCustom<T>),
   );
+
+  // subscribe to the result and update the state
+  result$.pipe(takeUntilDestroyed()).subscribe((state) => resultState$.next(state));
+
+  return {
+    result$: resultState$,
+    reload: () => reloadTrigger$.next(),
+    result: () => resultState$.value.data,
+    update: (updateFn: (current: T) => T) => {
+      const current = resultState$.value;
+      if (current?.data) {
+        resultState$.next({
+          state: 'loaded',
+          isLoading: false,
+          data: updateFn(current.data),
+        });
+      }
+    },
+    set: (data) => {
+      resultState$.next({
+        state: 'loaded',
+        isLoading: false,
+        data: data,
+      });
+    },
+  };
 };
-
-const test1$ = new Subject<number>();
-const test2$ = new Subject<string>();
-const res = rxResourceCustom({
-  request: [test1$, test2$],
-  loader: ([test1Val, test2Val]) => {
-    console.log(test1Val, test2Val);
-    return of({} as Todo);
-  },
-});
-
-console.log('aaaa');
-res.subscribe((r) => r);

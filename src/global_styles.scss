@@ -4,7 +4,7 @@
 @tailwind utilities;
 
 button {
-  @apply rounded-md bg-gray-300 p-2;
+  @apply rounded-md bg-sky-200 p-2 text-sky-600;
 }
 
 h1 {
@@ -12,5 +12,17 @@ h1 {
 }
 
 input[type='number'] {
-  @apply w-full rounded-lg bg-gray-200;
+  @apply w-full rounded-lg bg-gray-200 p-2 pl-6;
+}
+
+.g-error {
+  @apply rounded-lg bg-red-200 p-4 text-center text-lg text-red-800;
+}
+
+.g-loading {
+  @apply rounded-lg bg-blue-200 p-4 text-center text-lg text-blue-800;
+}
+
+.g-item {
+  @apply cursor-pointer rounded-lg border border-sky-500 bg-gray-200 p-4 text-lg text-gray-800 hover:bg-gray-400;
 }

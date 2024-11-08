@@ -20,47 +20,24 @@ export interface Todo {
 // Helper type to extract the type of values emitted by an Observable
 type ObservableValue<T> = T extends Observable<infer U> ? U : never;
 
-type RxResourceCustomResult<T> =
-  | {
-      state: 'loading';
-      isLoading: true;
-      data: null;
-    }
-  | {
-      state: 'loaded';
-      isLoading: false;
-      data: T;
-    }
-  | {
-      state: 'error';
-      isLoading: false;
-      data: null;
-      error: unknown;
-    };
+type RxResourceCustomResult<T> = {
+  state: 'loading' | 'loaded' | 'error';
+  isLoading: boolean;
+  data: T | null;
+  error?: unknown;
+};
 
-// -------------------------------
-// BASIC EXAMPLE - NO RELOAD
-
-// export const rxResourceCustomBasic = <T, TLoader extends Observable<unknown>[]>(data: {
-//   request: [...TLoader];
-//   loader: (values: {
-//     [K in keyof TLoader]: ObservableValue<TLoader[K]>;
-//   }) => Observable<T>;
-// }): Observable<RxResourceCustomResult<T>> => {
-
-//   return of({ } as RxResourceCustomResult<any>);
+// type RxResourceCustomResult<T> = {
+//   state: 'loading'
+// } | {
+//   state: 'loaded',
+//   data: T | null;
+// } | {
+//   state: 'error',
+//   error: unknown;
 // }
 
-// const test1$ = new Subject<number>();
-// const test2$ = new Subject<string>();
-// const test3$ = new Subject<{name: string}>();
-
-// const result = rxResourceCustomBasic({
-//   request: [test1$, test2$, test3$],
-//   loader: ([v1, v2, v3]) => { // correct types
-//     return of({} as Todo);
-//   },
-// })
+// -------------------------------
 
 export const rxResourceCustomBasic = <T, TLoader extends Observable<unknown>[]>(data: {
   request: [...TLoader];

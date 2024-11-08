@@ -16,16 +16,21 @@ import { rxResourceCustom, Todo } from './model';
       <input type="number" [formControl]="limitControl" />
 
       @if (todosResource.result$ | async; as data) {
+        <!-- loading state -->
         @if (data.isLoading) {
           <div class="g-loading">Loading...</div>
-        } @else if (data.data) {
-          @for (item of data.data; track $index) {
-            <div class="g-item" (click)="onRemove(item)">{{ item.id }} -{{ item.title }}</div>
-          }
-        } @else if (data.error) {
+        }
+
+        <!-- error state -->
+        @else if (data.error) {
           <div class="g-error">
             {{ data.error }}
           </div>
+        }
+
+        <!-- display data -->
+        @for (item of data.data; track $index) {
+          <div class="g-item" (click)="onRemove(item)">{{ item.id }} -{{ item.title }}</div>
         }
       }
     </div>

@@ -15,16 +15,23 @@ import { Todo } from './model';
       <button (click)="todosResource.reload()">refresh</button>
       <input type="number" [formControl]="limitControl" />
 
+      <!-- loading state -->
       @if (todosResource.isLoading()) {
         <div class="g-loading">Loading...</div>
-      } @else if (todosResource.value()) {
-        @for (item of todosResource.value() ?? []; track $index) {
-          <div class="g-item" (click)="onRemove(item)">{{ item.id }} -{{ item.title }}</div>
-        }
-      } @else if (todosResource.error()) {
+      }
+
+      <!-- error state -->
+      @else if (todosResource.error()) {
         <div class="g-error">
           {{ todosResource.error() }}
         </div>
+      }
+
+      <!-- display data -->
+      @else if (todosResource.value()) {
+        @for (item of todosResource.value() ?? []; track $index) {
+          <div class="g-item" (click)="onRemove(item)">{{ item.id }} -{{ item.title }}</div>
+        }
       }
     </div>
   `,

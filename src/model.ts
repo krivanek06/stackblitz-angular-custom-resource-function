@@ -166,7 +166,7 @@ export const rxResourceCustom = <T, TLoader extends Observable<unknown>[]>(data:
   result$.pipe(takeUntilDestroyed()).subscribe((state) => resultState$.next(state));
 
   return {
-    result$: resultState$,
+    result$: resultState$.asObservable(),
     reload: () => reloadTrigger$.next(),
     result: () => resultState$.value.data,
     update: (updateFn: (current: T) => T) => {

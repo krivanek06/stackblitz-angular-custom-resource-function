@@ -3,6 +3,8 @@ import {
   BehaviorSubject,
   catchError,
   combineLatest,
+  combineLatestWith,
+  exhaustMap,
   Observable,
   of,
   shareReplay,
@@ -125,8 +127,10 @@ export const rxResourceCustom = <T, TLoader extends Observable<unknown>[]>(data:
     data: null,
   });
 
-  const result$ = combineLatest([reloadTrigger$.pipe(startWith(null)), ...data.request]).pipe(
-    switchMap(([_, ...values]) =>
+  const result$ = reloadTrigger$.pipe(
+    startWith(null),
+    combineLatestWith(...data.request),
+    exhaustMap(([_, ...values]) =>
       data
         .loader(
           values as {

@@ -68,25 +68,31 @@ export const rxResourceCustomBasic = <T, TLoader extends Observable<unknown>[]>(
         .pipe(
           switchMap((result) =>
             of({
-              state: 'loaded',
-              isLoading: false,
+              state: 'loaded' as const,
               data: result,
-            } satisfies RxResourceCustomResult<T>),
+            }),
           ),
           // setup loading state
           startWith({
-            state: 'loading',
-            isLoading: true,
+            state: 'loading' as const,
             data: null,
-          } satisfies RxResourceCustomResult<T>),
+          }),
           // handle error state
           catchError((error) =>
             of({
-              state: 'error',
-              isLoading: false,
+              state: 'error' as const,
               error,
               data: null,
-            } satisfies RxResourceCustomResult<T>),
+            }),
+          ),
+
+          // map the result to the expected type
+          map(
+            (result) =>
+              ({
+                ...result,
+                isLoading: result.state === 'loading',
+              }) satisfies RxResourceCustomResult<T>,
           ),
         ),
     ),

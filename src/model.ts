@@ -5,6 +5,7 @@ import {
   combineLatest,
   combineLatestWith,
   exhaustMap,
+  map,
   Observable,
   of,
   shareReplay,
@@ -23,7 +24,14 @@ export interface Todo {
 type ObservableValue<T> = T extends Observable<infer U> ? U : never;
 
 type RxResourceCustomResult<T> = {
-  state: 'loading' | 'loaded' | 'error';
+  /**
+   * states:
+   * - `loading` - the resource is loading
+   * - `loaded` - the resource has been loaded
+   * - `error` - an error occurred while loading the resource
+   * - `local` - the resource has been set/modified locally
+   */
+  state: 'loading' | 'loaded' | 'error' | 'local';
   isLoading: boolean;
   data: T | null;
   error?: unknown;
@@ -47,8 +55,10 @@ export const rxResourceCustomBasic = <T, TLoader extends Observable<unknown>[]>(
     [K in keyof TLoader]: ObservableValue<TLoader[K]>;
   }) => Observable<T>;
 }): Observable<RxResourceCustomResult<T>> => {
+  // listen to all the requests observables
   return combineLatest(data.request).pipe(
     switchMap((values) =>
+      // execute the loader function provided by the user
       data
         .loader(
           values as {
@@ -96,7 +106,7 @@ export type RxResourceCustom<T> = {
   /**
    * @returns the current result of the resource
    */
-  result: () => T | null;
+  value: () => T | null;
   /**
    * @param updateFn - function to update the current data
    */
@@ -121,16 +131,21 @@ export const rxResourceCustom = <T, TLoader extends Observable<unknown>[]>(data:
   const reloadTrigger$ = new Subject<void>();
 
   // hold the latest result of type `T | null`
-  const resultState$ = new BehaviorSubject<RxResourceCustomResult<T>>({
-    state: 'loading',
-    isLoading: true,
+  const resultState$ = new BehaviorSubject<{
+    state: RxResourceCustomResult<T>['state'];
+    data: T | null;
+  }>({
+    state: 'loading' as const,
     data: null,
   });
 
   const result$ = reloadTrigger$.pipe(
     startWith(null),
+    // listen to all the requests observables
     combineLatestWith(...data.request),
+    // prevent request cancellation
     exhaustMap(([_, ...values]) =>
+      // execute the loader function provided by the user
       data
         .loader(
           values as {
@@ -140,27 +155,24 @@ export const rxResourceCustom = <T, TLoader extends Observable<unknown>[]>(data:
         .pipe(
           switchMap((result) =>
             of({
-              state: 'loaded',
-              isLoading: false,
+              state: 'loaded' as const,
               data: result,
-            } satisfies RxResourceCustomResult<T>),
+            }),
           ),
 
           // setup loading state
           startWith({
-            state: 'loading',
-            isLoading: true,
+            state: 'loading' as const,
             data: null,
-          } satisfies RxResourceCustomResult<T>),
+          }),
 
           // handle error state
           catchError((error) =>
             of({
-              state: 'error',
-              isLoading: false,
+              state: 'error' as const,
               error,
               data: null,
-            } satisfies RxResourceCustomResult<T>),
+            }),
           ),
         ),
     ),
@@ -170,23 +182,26 @@ export const rxResourceCustom = <T, TLoader extends Observable<unknown>[]>(data:
   result$.pipe(takeUntilDestroyed()).subscribe((state) => resultState$.next(state));
 
   return {
-    result$: resultState$.asObservable(),
+    result$: resultState$.asObservable().pipe(
+      map((state) => ({
+        ...state,
+        isLoading: state.state === 'loading',
+      })),
+    ),
     reload: () => reloadTrigger$.next(),
-    result: () => resultState$.value.data,
+    value: () => resultState$.value.data,
     update: (updateFn: (current: T) => T) => {
       const current = resultState$.value;
       if (current?.data) {
         resultState$.next({
-          state: 'loaded',
-          isLoading: false,
+          state: 'local',
           data: updateFn(current.data),
         });
       }
     },
     set: (data) => {
       resultState$.next({
-        state: 'loaded',
-        isLoading: false,
+        state: 'local',
         data: data,
       });
     },

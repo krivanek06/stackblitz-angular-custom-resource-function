@@ -1,19 +1,19 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
-import { rxResource, toSignal } from '@angular/core/rxjs-interop';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { Component, inject, signal } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { delay, map } from 'rxjs';
 import { Todo } from './model';
 
 @Component({
   selector: 'app-resource-normal-example',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [FormsModule],
   template: `
     <div class="grid gap-y-2">
       <h1>Resource Normal Example</h1>
       <button (click)="todosResource.reload()">refresh</button>
-      <input type="number" [formControl]="limitControl" />
+      <input type="number" [ngModel]="limitControl()" (ngModelChange)="limitControl.set($event)" />
 
       <!-- loading state -->
       @if (todosResource.isLoading()) {
@@ -28,7 +28,7 @@ import { Todo } from './model';
       }
 
       <!-- display data -->
-      @else if (todosResource.value()) {
+      @else if (todosResource.hasValue()) {
         @for (item of todosResource.value() ?? []; track $index) {
           <div class="g-item" (click)="onRemove(item)">{{ item.id }} -{{ item.title }}</div>
         }
@@ -38,14 +38,10 @@ import { Todo } from './model';
 })
 export class ResourceNormalExample {
   private http = inject(HttpClient);
-  limitControl = new FormControl<number>(5, { nonNullable: true });
-
-  limitValue = toSignal(this.limitControl.valueChanges, {
-    initialValue: this.limitControl.value,
-  });
+  limitControl = signal<number>(5);
 
   todosResource = rxResource({
-    request: this.limitValue,
+    request: this.limitControl,
     loader: ({ request: limit }) => {
       return this.http.get<Todo[]>(`https://jsonplaceholder.typicode.com/todos?_limit=${limit}`).pipe(
         map((res) => {

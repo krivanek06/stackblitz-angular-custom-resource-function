@@ -13,7 +13,7 @@ import { Todo } from './model';
     <div class="grid gap-y-2">
       <h1>Resource Normal Example</h1>
       <button (click)="todosResource.reload()">refresh</button>
-      <input type="number" [ngModel]="limitControl()" (ngModelChange)="limitControl.set($event)" />
+      <input type="number" [(ngModel)]="limitControl" />
 
       <!-- loading state -->
       @if (todosResource.isLoading()) {

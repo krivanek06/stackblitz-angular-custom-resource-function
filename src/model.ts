@@ -8,10 +8,12 @@ import {
   map,
   Observable,
   of,
+  retry,
   shareReplay,
   startWith,
   Subject,
   switchMap,
+  timeout,
 } from 'rxjs';
 
 export interface Todo {
@@ -171,6 +173,12 @@ export const rxResourceCustom = <T, TLoader extends Observable<unknown>[]>(data:
             state: 'loading' as const,
             data: null,
           }),
+
+          // retry the request 2 times
+          retry(2),
+
+          // cancel the request after 3 seconds
+          timeout(3000),
 
           // handle error state
           catchError((error) =>

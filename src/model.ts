@@ -9,7 +9,6 @@ import {
   Observable,
   of,
   retry,
-  shareReplay,
   startWith,
   Subject,
   switchMap,
@@ -39,6 +38,14 @@ type RxResourceCustomResult<T> = {
   error?: unknown;
 };
 
+// export const rxResourceCustomBasic = (data: {
+//   request: any[];
+//   loader: (values: any) => Observable<any>;
+// }): Observable<RxResourceCustomResult<any>> => {
+// 	// todo ....
+//   return of({} as RxResourceCustomResult<any>);
+// }
+
 // type RxResourceCustomResult<T> = {
 //   state: 'loading'
 // } | {
@@ -59,7 +66,7 @@ export const rxResourceCustomBasic = <T, TLoader extends Observable<unknown>[]>(
 }): Observable<RxResourceCustomResult<T>> => {
   // listen to all the requests observables
   return combineLatest(data.request).pipe(
-    switchMap((values) =>
+    exhaustMap((values) =>
       // execute the loader function provided by the user
       data
         .loader(
@@ -68,38 +75,20 @@ export const rxResourceCustomBasic = <T, TLoader extends Observable<unknown>[]>(
           },
         )
         .pipe(
-          switchMap((result) =>
-            of({
-              state: 'loaded' as const,
-              data: result,
-            }),
-          ),
+          switchMap((result) => of({ state: 'loaded' as const, data: result, isLoading: false })),
           // setup loading state
-          startWith({
-            state: 'loading' as const,
-            data: null,
-          }),
+          startWith({ state: 'loading' as const, data: null, isLoading: true }),
           // handle error state
           catchError((error) =>
             of({
               state: 'error' as const,
+              isLoading: false,
               error,
               data: null,
             }),
           ),
-
-          // map the result to the expected type
-          map(
-            (result) =>
-              ({
-                ...result,
-                isLoading: result.state === 'loading',
-              }) satisfies RxResourceCustomResult<T>,
-          ),
         ),
     ),
-    // share the observable
-    shareReplay(1),
   );
 };
 

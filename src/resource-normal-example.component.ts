@@ -12,7 +12,10 @@ import { Todo } from './model';
   template: `
     <div class="grid gap-y-2">
       <h1>Resource Normal Example</h1>
+      <!-- refresh button -->
       <button (click)="todosResource.reload()">refresh</button>
+
+      <!-- limit input -->
       <input type="number" [(ngModel)]="limitControl" />
 
       <!-- loading state -->
